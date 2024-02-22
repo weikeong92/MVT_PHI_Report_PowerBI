@@ -49,7 +49,7 @@ if __name__ == "__main__":
     ]
 
     #source_directory = "G:\\WZ\\MVT-YieldSummary\\2022"
-    destination_directory = "//PGGAPP3001//ToWeiKeong//data"
+    destination_directory = "//PGGAPP3001//ToWeiKeong//LatestData"
 
     for source_directory in source_directories:
         find_and_copy_recent_gz(source_directory, destination_directory)
