@@ -4,33 +4,91 @@ import gzip
 import csv
 from datetime import datetime, timedelta
 
+
+
 def replace_header(csv_file):
-    header = [
-        "ODM", "Prodname", "Year", "Workweek", "Station", "Input", "1A fail", "2A fail",
-        "Test result", "Indicator", "Pareto", "Qty", "1A PASS", "Yield", "Alpha",
-        "Si fail QTY", "NDF QTY", "Si fail dpm", "NDF dpm", "Remarks", "Yield GOAL",
-        "Alpha Goal", "notes", "Test Time", "Test time1"
-    ]
+    try:
+        header = [
+            "ODM", "Prodname", "Year", "Workweek", "Station", "Input", "1A fail", "2A fail",
+            "Test result", "Indicator", "Pareto", "Qty", "1A PASS", "Yield", "Alpha",
+            "Si fail QTY", "NDF QTY", "Si fail dpm", "NDF dpm", "Remarks", "Yield GOAL",
+            "Alpha Goal", "notes", "Test Time", "Test time1"
+        ]
 
-    header = [col.strip() for col in header]
+        header = [col.strip() for col in header]
 
-    with open(csv_file, 'r', newline='') as file:
-        rows = list(csv.reader(file))
-        rows[0] = header
+        with open(csv_file, 'r', newline='') as file:
+            rows = list(csv.reader(file))
+            rows[0] = header
 
-    with open(csv_file, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerows(rows)
+            for row_idx, row in enumerate(rows[1:], start=1):
+                try:
+                    for col_idx in [13, 16, 17]:
+                        if row[col_idx] == '#DIV/0!':
+                            row[col_idx] = '0'
+                except IndexError:
+                    #print(f"Error: Index out of range in row column {col_idx}")
+                    continue
+                
+                try:
+                    for col in [0, 5, 10, 11, 13, 14, 18, 23]:
+                        odm_idx = header.index('ODM')
+                        if row[odm_idx].strip() == "GemTek":
+                            row[odm_idx] = "Gemtek"
 
-def process_folder(folder_path):
-    for foldername, subfolders, filenames in os.walk(folder_path):
-        for filename in filenames:
-            if filename.endswith('.csv'):
-                csv_file = os.path.join(foldername, filename)
-                replace_header(csv_file)
-                print(f"Header replaced in {csv_file}")
+                        input_idx = header.index('Input')
+                        if row[input_idx].strip() == '-' or row[input_idx].strip() == "NO PRF":
+                            row[input_idx] = '0'
+
+                        pareto_idx = header.index('Pareto')
+                        if row[pareto_idx].strip() == '0':
+                            row[pareto_idx] = 'NA'
+
+                        qty_idx = header.index('Qty')
+                        if row[qty_idx].strip().startswith('-') or row[qty_idx].strip() == "#VALUE!":
+                            row[qty_idx] = '0'
+
+                        yield_idx = header.index('Yield')
+                        if row[yield_idx].strip() == "#VALUE!" or row[yield_idx].strip() == "#DIV/0!":
+                            row[yield_idx] = '0.00%'
+                        elif row[yield_idx].strip().startswith('-'):
+                            row[yield_idx] = '0.00%'
+
+                        alpha_idx = header.index('Alpha')
+                        if row[alpha_idx].strip() == "#DIV/0!":
+                            row[alpha_idx] = '0.00%'
+
+                        ndfdpm_idx = header.index('NDF dpm')
+                        if row[ndfdpm_idx].strip() == "#DIV/0!":
+                            row[ndfdpm_idx] = '0'
+                    
+                        test_time_idx = header.index('Test Time')
+                        row[test_time_idx] = row[test_time_idx].replace('S', '')
+
+                except ValueError:
+                    print(f"Error: {col} column not found in row {row_idx}")
+
+        with open(csv_file, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(rows)
+            
+
+    except Exception as e:
+        print(f"Error processing {csv_file}: {e}")
+
+
+# def process_folder(folder_path):
+#     for foldername, subfolders, filenames in os.walk(folder_path):
+#         for filename in filenames:
+#             if filename.endswith('.csv'):
+#                 csv_file = os.path.join(foldername, filename)
+#                 replace_header(csv_file)
+                
 
 def find_and_copy_recent_gz(src_dir, dest_dir):
+    #data_log_file = "C:\\temp\\yield_report_data_log"
+    data_log_file = r"\\ger.corp.intel.com\\ec\\proj\\ha\\ITL\VT\Teams\\MVT\\Users\\tanweike\\Yield_Report_Data\\_log_\\yield_report_log.txt"
+
     if not os.path.exists(src_dir):
         print(f"Source directory '{src_dir}' does not exist.")
         return
@@ -52,29 +110,39 @@ def find_and_copy_recent_gz(src_dir, dest_dir):
 
                 if file_age_seconds <= max_age_seconds:
 
-                    dest_path = os.path.join(dest_dir, filename)
+                    filename_yp = os.path.splitext(os.path.splitext(filename)[0])[0]
 
-                    shutil.copy2(src_path, dest_path)
-                    print(f"Copied '{filename}' to '{dest_dir}'.")
+                    with open(data_log_file, 'r') as file:
+                        for line in file:
+                            if filename_yp in line:
+                                break
+                        else:
+                            dest_path = os.path.join(dest_dir, filename)
 
-                    with gzip.open(dest_path, 'rb') as f_in:
-                        with open(dest_path[:-3], 'wb') as f_out:
-                            shutil.copyfileobj(f_in, f_out)
-                            print(f"Extracted contents from '{filename}'.")
+                            shutil.copy2(src_path, dest_path)
+                            print(f"\nCopied '{filename}' to '{dest_dir}'.")
 
-                    os.remove(dest_path)
+                            with gzip.open(dest_path, 'rb') as f_in:
+                                with open(dest_path[:-3], 'wb') as f_out:
+                                    shutil.copyfileobj(f_in, f_out)
+                                    print(f"Extracted contents from '{filename}'.")
 
-                    # Get the path to the extracted CSV file
-                    csv_file_path = dest_path[:-3]
+                            os.remove(dest_path)
 
-                    # Replace the header in the CSV file
-                    replace_header(csv_file_path)
-                    print(f"Header replaced in '{csv_file_path}'.")
+                            csv_file_path = dest_path[:-3]
 
-                    # Move the file to the destination directory
-                    destination_path = os.path.join(destination_directory, os.path.basename(csv_file_path))
-                    shutil.move(csv_file_path, destination_path)
-                    print(f"Moved '{os.path.basename(csv_file_path)}' to '{destination_directory}'.")
+                            replace_header(csv_file_path)
+                            print(f"Header replaced in {csv_file_path}")
+
+                            #Move the file to the destination directory
+                            destination_path = os.path.join(destination_directory, os.path.basename(csv_file_path))
+                            shutil.move(csv_file_path, destination_path)
+                            print(f"Moved '{os.path.basename(csv_file_path)}' to '{destination_directory}'.")
+
+                            yield_report_file = os.path.basename(os.path.splitext(csv_file_path)[0])
+                            with open(data_log_file, 'a') as file:
+                                file.write(yield_report_file+"\n")
+
 
 if __name__ == "__main__":
     source_directories = [
@@ -86,7 +154,7 @@ if __name__ == "__main__":
         "//EBS-PG-MVT3.cps.intel.com//it_mvtarchive//prod//ebsarchive//WZ/MVT-YieldSummary"
     ]
 
-    destination_directory = "//PGGAPP3001//ToWeiKeong//data"
+    destination_directory = r"\\ger.corp.intel.com\\ec\\proj\\ha\\ITL\VT\Teams\\MVT\\Users\\tanweike\\Yield_Report_Data"
 
     for source_directory in source_directories:
         find_and_copy_recent_gz(source_directory, destination_directory)
