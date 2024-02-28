@@ -2,9 +2,12 @@ import os
 import shutil
 import gzip
 import csv
-from datetime import datetime, timedelta
+import re
+from datetime import datetime, timedelta, date
 
-
+today = date.today()
+iso_week = today.isocalendar()[1]
+work_week = iso_week - 1 if today.isoweekday == 7 else iso_week
 
 def replace_header(csv_file):
     try:
@@ -76,7 +79,6 @@ def replace_header(csv_file):
     except Exception as e:
         print(f"Error processing {csv_file}: {e}")
 
-
 # def process_folder(folder_path):
 #     for foldername, subfolders, filenames in os.walk(folder_path):
 #         for filename in filenames:
@@ -88,6 +90,7 @@ def replace_header(csv_file):
 def find_and_copy_recent_gz(src_dir, dest_dir):
     #data_log_file = "C:\\temp\\yield_report_data_log"
     data_log_file = r"\\ger.corp.intel.com\\ec\\proj\\ha\\ITL\VT\Teams\\MVT\\Users\\tanweike\\Yield_Report_Data\\_log_\\yield_report_log.txt"
+    expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'Gemtekvn', 'GemtekVN', 'Syrma'}
 
     if not os.path.exists(src_dir):
         print(f"Source directory '{src_dir}' does not exist.")
@@ -111,7 +114,21 @@ def find_and_copy_recent_gz(src_dir, dest_dir):
                 if file_age_seconds <= max_age_seconds:
 
                     filename_yp = os.path.splitext(os.path.splitext(filename)[0])[0]
+                    parts = filename_yp.split('_')
+                    odm = parts[0]
 
+                    for part in parts:
+                        if re.match(r'ww\d{2}', part):
+                            ww = part[2:]
+                            if ww[0] == '0':
+                                ww = ww[1:]
+                                if (str(ww) == str(work_week-1)):
+                                    if odm not in expected_odm:
+                                        print(f"Missing Yield Report from {odm} this work week {ww}")
+                            elif (str(ww) == str(work_week-1)):
+                                if odm not in expected_odm:
+                                    print(f"Missing Yield Report from {odm} this work week {ww}")
+                            
                     with open(data_log_file, 'r') as file:
                         for line in file:
                             if filename_yp in line:
@@ -143,7 +160,6 @@ def find_and_copy_recent_gz(src_dir, dest_dir):
                             with open(data_log_file, 'a') as file:
                                 file.write(yield_report_file+"\n")
 
-
 if __name__ == "__main__":
     source_directories = [
         "//EBS-PG-MVT3.cps.intel.com//it_mvtarchive//prod//ebsarchive//CB//MVT-YieldSummary",
@@ -154,7 +170,7 @@ if __name__ == "__main__":
         "//EBS-PG-MVT3.cps.intel.com//it_mvtarchive//prod//ebsarchive//WZ/MVT-YieldSummary"
     ]
 
-    destination_directory = r"\\ger.corp.intel.com\\ec\\proj\\ha\\ITL\VT\Teams\\MVT\\Users\\tanweike\\Yield_Report_Data"
+    destination_directory = r"\\ger.corp.intel.com\\ec\\proj\\ha\\ITL\VT\Teams\\MVT\\Users\\tanweike\\Yield_Report_Data\\data"
 
     for source_directory in source_directories:
         find_and_copy_recent_gz(source_directory, destination_directory)
