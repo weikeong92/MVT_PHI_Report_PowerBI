@@ -3,6 +3,10 @@ import shutil
 import gzip
 import csv
 import re
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 from datetime import datetime, timedelta, date
 
 today = date.today()
@@ -75,7 +79,6 @@ def replace_header(csv_file):
             writer = csv.writer(file)
             writer.writerows(rows)
             
-
     except Exception as e:
         print(f"Error processing {csv_file}: {e}")
 
@@ -86,11 +89,33 @@ def replace_header(csv_file):
 #                 csv_file = os.path.join(foldername, filename)
 #                 replace_header(csv_file)
                 
+def send_email(odm, ww):
+    sender_email = "wei.keong.tan@intel.com"
+    receiver_email = "wei.keong.tan@intel.com, kent.yen.keong@intel.com, guanx.yi.lim@intel.com"
+    pwd = "Elon@369"
+    
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = "Alert! No New Yield Report Receive from ODM This Week"
+
+    body = f"Missing Yield Report from {odm} this work week {ww}"
+    msg.attach(MIMEText(body, 'plain'))
+
+    server = smtplib.SMTP('smtpauth.intel.com', 587)
+    server.starttls()
+    server.login(sender_email, pwd)
+    server.sendmail(sender_email, [receiver_email], msg.as_string())
+    server.quit()
+    #print("successfully sent email to %s\n" % (msg['To']))
+
+#Transfer the csv files to SharePoint
+
 
 def find_and_copy_recent_gz(src_dir, dest_dir):
     #data_log_file = "C:\\temp\\yield_report_data_log"
     data_log_file = r"\\ger.corp.intel.com\\ec\\proj\\ha\\ITL\VT\Teams\\MVT\\Users\\tanweike\\Yield_Report_Data\\_log_\\yield_report_log.txt"
-    expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'Gemtekvn', 'GemtekVN', 'Syrma'}
+    expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'GemtekVN', 'Syrma'}
 
     if not os.path.exists(src_dir):
         print(f"Source directory '{src_dir}' does not exist.")
@@ -122,12 +147,16 @@ def find_and_copy_recent_gz(src_dir, dest_dir):
                             ww = part[2:]
                             if ww[0] == '0':
                                 ww = ww[1:]
-                                if (str(ww) == str(work_week-1)):
+                                if (str(ww) == str(work_week-1) or str(ww) == str(work_week-2)):
+                                    print(f"Processing Yield Report from {odm}...\n")
                                     if odm not in expected_odm:
-                                        print(f"Missing Yield Report from {odm} this work week {ww}")
-                            elif (str(ww) == str(work_week-1)):
+                                        #print(f"Missing Yield Report from {odm} this work week {ww}")
+                                        send_email(odm, ww)
+                            elif (str(ww) == str(work_week-1) or str(ww) == str(work_week-2)):
+                                print(f"Processing Yield Report from {odm}...\n")
                                 if odm not in expected_odm:
-                                    print(f"Missing Yield Report from {odm} this work week {ww}")
+                                    #print(f"Missing Yield Report from {odm} this work week {ww}")
+                                    send_email(odm, ww)
                             
                     with open(data_log_file, 'r') as file:
                         for line in file:
