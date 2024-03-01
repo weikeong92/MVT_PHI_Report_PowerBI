@@ -4,6 +4,7 @@ import gzip
 import csv
 import re
 import smtplib
+import subprocess
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
@@ -12,6 +13,8 @@ from datetime import datetime, timedelta, date
 today = date.today()
 iso_week = today.isocalendar()[1]
 work_week = iso_week - 1 if today.isoweekday == 7 else iso_week
+date_today = datetime.today()
+formatted_timedate = date_today.strftime("%m/%d/%Y %H:%M:%S")
 
 def replace_header(csv_file):
     try:
@@ -97,7 +100,7 @@ def send_email(odm, ww):
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email
-    msg['Subject'] = "Alert! No New Yield Report Receive from ODM This Week"
+    msg['Subject'] = "Test Alert! No New Yield Report Receive from ODM This Week"
 
     body = f"Missing Yield Report from {odm} this work week {ww}"
     msg.attach(MIMEText(body, 'plain'))
@@ -109,13 +112,20 @@ def send_email(odm, ww):
     server.quit()
     #print("successfully sent email to %s\n" % (msg['To']))
 
-#Transfer the csv files to SharePoint
-
+def upload_file_2sharepoint():
+    ps_script_path = "C:\\ScheduleTask\\MVT_PHI_HVM_PBI\\upload_data.ps1"
+    print("\nPowerShell Running...")
+    result = subprocess.run(["pwsh.exe", "-File", ps_script_path], capture_output=True, text=True)
+     
+    print("PowerShell Output: \n", result.stdout)
+     
+    if result.returncode != 0:
+        print(f"{formatted_timedate}, PowerShell script failed with return code:  '{result.returncode}'\n")
 
 def find_and_copy_recent_gz(src_dir, dest_dir):
     #data_log_file = "C:\\temp\\yield_report_data_log"
-    data_log_file = r"\\ger.corp.intel.com\\ec\\proj\\ha\\ITL\VT\Teams\\MVT\\Users\\tanweike\\Yield_Report_Data\\_log_\\yield_report_log.txt"
-    expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'GemtekVN', 'Syrma'}
+    data_log_file = r"C:\\ScheduleTask\\MVT_PHI_HVM_PBI\\_log_\\yield_report_log.txt"
+    expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'GemtekVN', 'Syrma', 'BrazilFlex'}
 
     if not os.path.exists(src_dir):
         print(f"Source directory '{src_dir}' does not exist.")
@@ -148,12 +158,10 @@ def find_and_copy_recent_gz(src_dir, dest_dir):
                             if ww[0] == '0':
                                 ww = ww[1:]
                                 if (str(ww) == str(work_week-1) or str(ww) == str(work_week-2)):
-                                    print(f"Processing Yield Report from {odm}...\n")
                                     if odm not in expected_odm:
                                         #print(f"Missing Yield Report from {odm} this work week {ww}")
                                         send_email(odm, ww)
                             elif (str(ww) == str(work_week-1) or str(ww) == str(work_week-2)):
-                                print(f"Processing Yield Report from {odm}...\n")
                                 if odm not in expected_odm:
                                     #print(f"Missing Yield Report from {odm} this work week {ww}")
                                     send_email(odm, ww)
@@ -199,7 +207,8 @@ if __name__ == "__main__":
         "//EBS-PG-MVT3.cps.intel.com//it_mvtarchive//prod//ebsarchive//WZ/MVT-YieldSummary"
     ]
 
-    destination_directory = r"\\ger.corp.intel.com\\ec\\proj\\ha\\ITL\VT\Teams\\MVT\\Users\\tanweike\\Yield_Report_Data\\data"
+    destination_directory = r"C:\\ScheduleTask\\MVT_PHI_HVM_PBI\\data"
 
     for source_directory in source_directories:
         find_and_copy_recent_gz(source_directory, destination_directory)
+    upload_file_2sharepoint()
