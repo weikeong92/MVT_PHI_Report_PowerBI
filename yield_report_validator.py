@@ -16,6 +16,10 @@ work_week = iso_week - 1 if today.isoweekday == 7 else iso_week
 date_today = datetime.today()
 formatted_timedate = date_today.strftime("%m/%d/%Y %H:%M:%S")
 
+expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'GemtekVN', 'Syrma', 'BrazilFlex'}
+encountered_odm = set()
+missing_odms_acc = set()
+
 def replace_header(csv_file):
     try:
         header = [
@@ -94,13 +98,14 @@ def replace_header(csv_file):
                 
 def send_email(odm, ww):
     sender_email = "wei.keong.tan@intel.com"
-    receiver_email = "wei.keong.tan@intel.com, kent.yen.keong@intel.com, guanx.yi.lim@intel.com"
+    #receiver_email = "wei.keong.tan@intel.com, kent.yen.keong@intel.com, guanx.yi.lim@intel.com"
+    receiver_email = "wei.keong.tan@intel.com"
     pwd = "Elon@369"
     
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email
-    msg['Subject'] = "Test Alert! No New Yield Report Receive from ODM This Week"
+    msg['Subject'] = "Test Alert! No New Yield Report Receive from ODM This Week\n Please check with ODM to request them to upload the latest yield report!"
 
     body = f"Missing Yield Report from {odm} this work week {ww}"
     msg.attach(MIMEText(body, 'plain'))
@@ -125,8 +130,7 @@ def upload_file_2sharepoint():
 def find_and_copy_recent_gz(src_dir, dest_dir):
     #data_log_file = "C:\\temp\\yield_report_data_log"
     data_log_file = r"C:\\ScheduleTask\\MVT_PHI_HVM_PBI\\_log_\\yield_report_log.txt"
-    expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'GemtekVN', 'Syrma', 'BrazilFlex'}
-
+    
     if not os.path.exists(src_dir):
         print(f"Source directory '{src_dir}' does not exist.")
         return
@@ -134,7 +138,7 @@ def find_and_copy_recent_gz(src_dir, dest_dir):
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
 
-    max_age_seconds = 7 * 24 * 60 * 60
+    max_age_seconds = 2 * 24 * 60 * 60
 
     current_time = datetime.now()
 
@@ -152,20 +156,17 @@ def find_and_copy_recent_gz(src_dir, dest_dir):
                     parts = filename_yp.split('_')
                     odm = parts[0]
 
+                    encountered_odm.add(odm)
+
                     for part in parts:
                         if re.match(r'ww\d{2}', part):
                             ww = part[2:]
                             if ww[0] == '0':
                                 ww = ww[1:]
-                                if (str(ww) == str(work_week-1) or str(ww) == str(work_week-2)):
-                                    if odm not in expected_odm:
-                                        #print(f"Missing Yield Report from {odm} this work week {ww}")
-                                        send_email(odm, ww)
-                            elif (str(ww) == str(work_week-1) or str(ww) == str(work_week-2)):
-                                if odm not in expected_odm:
-                                    #print(f"Missing Yield Report from {odm} this work week {ww}")
-                                    send_email(odm, ww)
-                            
+                            #if (str(ww) == str(work_week-1) or str(ww) == str(work_week-2)):
+                                # how to modify the code to check and ensure if odm only get certain expected_odm, it will send email?
+                                # send_email(odm, ww)
+
                     with open(data_log_file, 'r') as file:
                         for line in file:
                             if filename_yp in line:
@@ -211,4 +212,9 @@ if __name__ == "__main__":
 
     for source_directory in source_directories:
         find_and_copy_recent_gz(source_directory, destination_directory)
+    
+    missing_odms_acc = expected_odm - encountered_odm
+    if missing_odms_acc:
+        for missing_odm in missing_odms_acc:
+            print(missing_odm)
     upload_file_2sharepoint()
