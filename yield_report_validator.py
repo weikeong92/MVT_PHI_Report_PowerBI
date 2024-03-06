@@ -98,7 +98,7 @@ def replace_header(csv_file):
 #                 replace_header(csv_file)
                 
 def send_email(odm_list, ww):
-    sender_email = "pbi.admin@intel.com"
+    sender_email = "wei.keong.tan@intel.com"
     receiver_email = "mvt_phi_hvm_pbi@intel.com"
     #receiver_email = "wei.keong.tan@intel.com"
     pwd = "Elon@369"
