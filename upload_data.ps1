@@ -20,12 +20,17 @@ try{
 
 #Get the folder to download
 try {
-    $CSVFiles = Get-ChildItem -Path $LocalFolderPath -Filter *.csv -File
-    foreach ($File in $CSVFiles) {
-        Add-PnPFile -Path $File.FullName -Folder $FolderSiteRelativeURL -ErrorAction Stop
-        #Write-Host "Uploaded $($File.Name) to SharePoint successfully."
-    }
-	Remove-Item -Path $CSVFiles -Force
+	$CSVFiles = Get-ChildItem -Path $LocalFolderPath -Filter *.csv -File
+	if ($CSVFiles.Count -eq 0) {
+		Write-Host "No CSV files found in the specified local folder. Skipping upload process."
+	} else {
+		foreach ($File in $CSVFiles) {
+			Add-PnPFile -Path $File.FullName -Folder $FolderSiteRelativeURL -ErrorAction Stop
+			#Write-Host "Uploaded $($File.Name) to SharePoint successfully."
+		}
+		Remove-Item -Path $CSVFiles -Force
+	}
 } catch {
-    Write-Host "Failed to upload CSV files to SharePoint. Error: $($_.Exception.Message)" -ForegroundColor Red
+	Write-Host "Failed to upload CSV files to SharePoint. Error: $($_.Exception.Message)" -ForegroundColor Red
 }
+

@@ -19,6 +19,7 @@ formatted_timedate = date_today.strftime("%m/%d/%Y %H:%M:%S")
 expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'GemtekVN', 'Syrma', 'BrazilFlex'}
 encountered_odm = set()
 missing_odms_acc = set()
+odm_no_yield_report = ""
 
 def replace_header(csv_file):
     try:
@@ -96,18 +97,18 @@ def replace_header(csv_file):
 #                 csv_file = os.path.join(foldername, filename)
 #                 replace_header(csv_file)
                 
-def send_email(odm, ww):
+def send_email(odm_list, ww):
     sender_email = "wei.keong.tan@intel.com"
-    #receiver_email = "wei.keong.tan@intel.com, kent.yen.keong@intel.com, guanx.yi.lim@intel.com"
-    receiver_email = "wei.keong.tan@intel.com"
+    receiver_email = "wei.keong.tan@intel.com, kent.yen.keong@intel.com, guanx.yi.lim@intel.com"
+    #receiver_email = "wei.keong.tan@intel.com"
     pwd = "Elon@369"
     
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email
-    msg['Subject'] = "Test Alert! No New Yield Report Receive from ODM This Week\n Please check with ODM to request them to upload the latest yield report!"
+    msg['Subject'] = f"Alert! No New Yield Report Receive from ODM This Work Week {ww}!"
 
-    body = f"Missing Yield Report from {odm} this work week {ww}"
+    body = f"Missing yield report(s) from the following ODM this work week {ww}: \n{odm_list}\nPlease check with ODM to request them to upload the latest yield report!"
     msg.attach(MIMEText(body, 'plain'))
 
     server = smtplib.SMTP('smtpauth.intel.com', 587)
@@ -138,7 +139,7 @@ def find_and_copy_recent_gz(src_dir, dest_dir):
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
 
-    max_age_seconds = 2 * 24 * 60 * 60
+    max_age_seconds = 7 * 24 * 60 * 60
 
     current_time = datetime.now()
 
@@ -163,40 +164,37 @@ def find_and_copy_recent_gz(src_dir, dest_dir):
                             ww = part[2:]
                             if ww[0] == '0':
                                 ww = ww[1:]
-                            #if (str(ww) == str(work_week-1) or str(ww) == str(work_week-2)):
-                                # how to modify the code to check and ensure if odm only get certain expected_odm, it will send email?
-                                # send_email(odm, ww)
+                            if (str(ww) == str(work_week-1) or str(ww) == str(work_week-2)):
+                                with open(data_log_file, 'r') as file:
+                                    for line in file:
+                                        if filename_yp in line:
+                                            break
+                                    else:
+                                        dest_path = os.path.join(dest_dir, filename)
 
-                    with open(data_log_file, 'r') as file:
-                        for line in file:
-                            if filename_yp in line:
-                                break
-                        else:
-                            dest_path = os.path.join(dest_dir, filename)
+                                        shutil.copy2(src_path, dest_path)
+                                        print(f"\nCopied '{filename}' to '{dest_dir}'.")
 
-                            shutil.copy2(src_path, dest_path)
-                            print(f"\nCopied '{filename}' to '{dest_dir}'.")
+                                        with gzip.open(dest_path, 'rb') as f_in:
+                                            with open(dest_path[:-3], 'wb') as f_out:
+                                                shutil.copyfileobj(f_in, f_out)
+                                                print(f"Extracted contents from '{filename}'.")
 
-                            with gzip.open(dest_path, 'rb') as f_in:
-                                with open(dest_path[:-3], 'wb') as f_out:
-                                    shutil.copyfileobj(f_in, f_out)
-                                    print(f"Extracted contents from '{filename}'.")
+                                        os.remove(dest_path)
 
-                            os.remove(dest_path)
+                                        csv_file_path = dest_path[:-3]
 
-                            csv_file_path = dest_path[:-3]
+                                        replace_header(csv_file_path)
+                                        print(f"Header replaced in {csv_file_path}")
 
-                            replace_header(csv_file_path)
-                            print(f"Header replaced in {csv_file_path}")
+                                        #Move the file to the destination directory
+                                        destination_path = os.path.join(destination_directory, os.path.basename(csv_file_path))
+                                        shutil.move(csv_file_path, destination_path)
+                                        print(f"Moved '{os.path.basename(csv_file_path)}' to '{destination_directory}'.")
 
-                            #Move the file to the destination directory
-                            destination_path = os.path.join(destination_directory, os.path.basename(csv_file_path))
-                            shutil.move(csv_file_path, destination_path)
-                            print(f"Moved '{os.path.basename(csv_file_path)}' to '{destination_directory}'.")
-
-                            yield_report_file = os.path.basename(os.path.splitext(csv_file_path)[0])
-                            with open(data_log_file, 'a') as file:
-                                file.write(yield_report_file+"\n")
+                                        yield_report_file = os.path.basename(os.path.splitext(csv_file_path)[0])
+                                        with open(data_log_file, 'a') as file:
+                                            file.write(yield_report_file+"\n")
 
 if __name__ == "__main__":
     source_directories = [
@@ -216,5 +214,6 @@ if __name__ == "__main__":
     missing_odms_acc = expected_odm - encountered_odm
     if missing_odms_acc:
         for missing_odm in missing_odms_acc:
-            print(missing_odm)
+            odm_no_yield_report += f"{missing_odm}\n"
+        send_email(odm_no_yield_report, work_week-1)
     upload_file_2sharepoint()
