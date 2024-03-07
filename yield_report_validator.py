@@ -16,7 +16,7 @@ work_week = iso_week - 1 if today.isoweekday == 7 else iso_week
 date_today = datetime.today()
 formatted_timedate = date_today.strftime("%m/%d/%Y %H:%M:%S")
 
-expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'GemtekVN', 'Syrma', 'BrazilFlex'}
+expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'GemtekVN', 'Syrma'}
 encountered_odm = set()
 missing_odms_acc = set()
 odm_no_yield_report = ""
@@ -98,7 +98,7 @@ def replace_header(csv_file):
 #                 replace_header(csv_file)
                 
 def send_email(odm_list, ww):
-    sender_email = "wei.keong.tan@intel.com"
+    sender_email = "wei.keong.tan@@intel.com"
     receiver_email = "mvt_phi_hvm_pbi@intel.com"
     #receiver_email = "wei.keong.tan@intel.com"
     pwd = "Elon@369"
