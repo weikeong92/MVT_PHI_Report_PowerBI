@@ -46,7 +46,7 @@ def replace_header(csv_file):
                     continue
                 
                 try:
-                    for col in [0, 5, 10, 11, 13, 14, 18, 23]:
+                    for col in [0, 5, 10, 11, 13, 14, 18, 20, 23]:
                         odm_idx = header.index('ODM')
                         if row[odm_idx].strip() == "GemTek":
                             row[odm_idx] = "Gemtek"
@@ -77,6 +77,12 @@ def replace_header(csv_file):
                         if row[ndfdpm_idx].strip() == "#DIV/0!":
                             row[ndfdpm_idx] = '0'
                     
+                        yieldgoal_idx = header.index('Yield GOAL')
+                        value = row[yieldgoal_idx].strip()
+                        percentage_pattern = r'^\d+(\.\d+)?%$'
+                        if not re.match(percentage_pattern, value):
+                            row[yieldgoal_idx] = ''
+
                         test_time_idx = header.index('Test Time')
                         row[test_time_idx] = row[test_time_idx].replace('S', '')
 
