@@ -107,7 +107,7 @@ def send_email(odm_list, ww):
     sender_email = "wei.keong.tan@intel.com"
     receiver_email = "mvt_phi_hvm_pbi@intel.com"
     #receiver_email = "wei.keong.tan@intel.com"
-    pwd = "Elon@369"
+    pwd = "Elon@369@Elon@369"
     
     msg = MIMEMultipart()
     msg['From'] = sender_email
