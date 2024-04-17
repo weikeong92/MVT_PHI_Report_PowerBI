@@ -16,7 +16,7 @@ work_week = iso_week - 1 if today.isoweekday == 7 else iso_week
 date_today = datetime.today()
 formatted_timedate = date_today.strftime("%m/%d/%Y %H:%M:%S")
 
-expected_odm = {'Azurewave', 'Gemtek', 'Gemtektw', 'GemtekVN', 'Syrma'}
+expected_odm = {'Azurewave', 'Gemtek', 'GemtekVN', 'Syrma'}
 encountered_odm = set()
 missing_odms_acc = set()
 odm_no_yield_report = ""
@@ -103,10 +103,10 @@ def replace_header(csv_file):
 #                 csv_file = os.path.join(foldername, filename)
 #                 replace_header(csv_file)
                 
-def send_email(odm_list, ww):
+def send_email(odm_list, odm_email, ww):
     sender_email = "icdgpgserver@intel.com"
+    #receiver_email = ", ".join([odm_email, "mvt_phi_hvm_pbi@intel.com"])
     receiver_email = "mvt_phi_hvm_pbi@intel.com"
-    #receiver_email = "wei.keong.tan@intel.com"
     pwd = "aalaa*11011"
     
     msg = MIMEMultipart()
@@ -114,7 +114,7 @@ def send_email(odm_list, ww):
     msg['To'] = receiver_email
     msg['Subject'] = f"Alert! No New Yield Report Receive from ODM This Work Week {ww}!"
 
-    body = f"Missing yield report(s) from the following ODM this work week {ww}: \n{odm_list}\nPlease check with ODM to request them to upload the latest yield report!"
+    body = f"Hi List,\n\nMissing yield report(s) from the following ODM this work week {ww}: \n{odm_list}\n\nPlease check with the ODM to upload the latest yield report to Intel!\n\n Thank you"
     msg.attach(MIMEText(body, 'plain'))
 
     server = smtplib.SMTP('smtpauth.intel.com', 587)
@@ -213,6 +213,14 @@ if __name__ == "__main__":
     ]
 
     destination_directory = r"C:\\ScheduleTask\\MVT_PHI_HVM_PBI\\data"
+    
+    email_odms = {
+        "Gemtekvn": "mis-vnsfcs@vn.gemteks.com",
+        "Syrma": "alert_intelxml@syrmasgs.com",
+        "Azurewave": "azw_ye_clc@azurewave.com",
+        #"Gemtektw": "mis-sfcs@gemteks.com",
+        "Gemtek" : "alert_intelxml@ks.gemteks.com"
+    }
 
     for source_directory in source_directories:
         find_and_copy_recent_gz(source_directory, destination_directory)
@@ -221,5 +229,8 @@ if __name__ == "__main__":
     if missing_odms_acc:
         for missing_odm in missing_odms_acc:
             odm_no_yield_report += f"{missing_odm}\n"
-        send_email(odm_no_yield_report, work_week-1)
+        odm_no_yield_report = odm_no_yield_report.strip()
+        if odm_no_yield_report in email_odms:
+            send_email(odm_no_yield_report, email_odms[odm_no_yield_report], work_week-1)
+            print(f"Missing Yield Report This Work Week {work_week-1}! Email sent!")
     upload_file_2sharepoint()
