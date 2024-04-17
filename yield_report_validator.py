@@ -114,7 +114,7 @@ def send_email(odm_list, odm_email, ww):
     msg['To'] = receiver_email
     msg['Subject'] = f"Alert! No New Yield Report Receive from ODM This Work Week {ww}!"
 
-    body = f"Hi List,\n\nMissing yield report(s) from the following ODM this work week {ww}: \n{odm_list}\n\nPlease check with the ODM to upload the latest yield report to Intel!\n\n Thank you"
+    body = f"Hi List,\n\nMissing yield report(s) from the following ODM this work week {ww}: \n{odm_list} - {odm_email}\n\nPlease check with the ODM to upload the latest yield report to Intel!\n\n Thank you"
     msg.attach(MIMEText(body, 'plain'))
 
     server = smtplib.SMTP('smtpauth.intel.com', 587)
