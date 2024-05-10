@@ -46,11 +46,17 @@ def replace_header(csv_file):
                     continue
                 
                 try:
-                    for col in [0, 5, 10, 11, 13, 14, 18, 20, 23]:
+                    for col in [0, 1, 5, 10, 11, 13, 14, 18, 20, 23]:
                         odm_idx = header.index('ODM')
                         if row[odm_idx].strip() == "GemTek":
                             row[odm_idx] = "Gemtek"
-
+                        
+                        prod_name_idx = header.index('Prodname')
+                        if 'Â' in row[prod_name_idx]:
+                            row[prod_name_idx] = row[prod_name_idx].replace('Â', '').strip()
+                        elif ' ' in row[prod_name_idx]:
+                            row[prod_name_idx] = row[prod_name_idx].replace(' ', '')
+                            
                         input_idx = header.index('Input')
                         if row[input_idx].strip() == '-' or row[input_idx].strip() == "NO PRF":
                             row[input_idx] = '0'
@@ -114,7 +120,7 @@ def send_email(odm_list, odm_email, ww):
     msg['To'] = receiver_email
     msg['Subject'] = f"Alert! No New Yield Report Receive from ODM This Work Week {ww}!"
 
-    body = f"Hi List,\n\nMissing yield report(s) from the following ODM this work week {ww}: \n{odm_list} - {odm_email}\n\nPlease check with the ODM to upload the latest yield report to Intel!\n\n Thank you"
+    body = f"Hi List,\n\nMissing yield report(s) from the following ODM this work week {ww}: \n{odm_list} - {odm_email}\n\nPlease check with the ODM to upload the latest yield report to Intel!\n\nThank you!"
     msg.attach(MIMEText(body, 'plain'))
 
     server = smtplib.SMTP('smtpauth.intel.com', 587)
@@ -145,7 +151,7 @@ def find_and_copy_recent_gz(src_dir, dest_dir):
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
 
-    max_age_seconds = 7 * 24 * 60 * 60
+    max_age_seconds = 2 * 7 * 24 * 60 * 60
 
     current_time = datetime.now()
 
