@@ -3,7 +3,7 @@ Import-Module PnP.PowerShell -DisableNameChecking
 $SiteURL = "https://intel.sharepoint.com/sites/VMSPFSFSBG02_KMPTE"
 $FolderSiteRelativeURL = "/sites/VMSPFSFSBG02_KMPTE/Shared Documents/MVT_PHI_Report_Mgm_Report"
 $Username = "wei.keong.tan@intel.com"
-$Password = ConvertTo-SecureString "Elon@369@Elon@369" -AsPlainText -Force
+$Password = ConvertTo-SecureString "Alien@336699" -AsPlainText -Force
 
 $Credentials = New-Object System.Management.Automation.PSCredential($Username, $Password)
 

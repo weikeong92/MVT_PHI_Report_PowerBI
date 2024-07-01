@@ -232,6 +232,7 @@ if __name__ == "__main__":
         find_and_copy_recent_gz(source_directory, destination_directory)
     
     missing_odms_acc = expected_odm - encountered_odm
+    print(missing_odms_acc)
     if missing_odms_acc:
         for missing_odm in missing_odms_acc:
             odm_no_yield_report += f"{missing_odm}\n"
